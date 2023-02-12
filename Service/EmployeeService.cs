@@ -4,6 +4,7 @@ using Entities.Exceptions;
 using Entities.Models;
 using Service.Contracts;
 using Shared.DataTransferObjects;
+using Shared.RequestFeatures;
 
 namespace Service
 {
@@ -36,16 +37,22 @@ namespace Service
       return employeeDb;
     }
 
-    public async Task<IEnumerable<EmployeeDto>> GetEmployees(Guid companyId, bool trackChanges)
+    public async Task<(IEnumerable<EmployeeDto> employees, MetaData metaData)> GetEmployeesAsync(Guid companyId,EmployeeParameters employeeParameters, bool trackChanges)
     {
+      if (!employeeParameters.ValidAgeRange)
+      {
+        throw new MaxAgeRangeBadRequestException();
+      }
       await CheckIfCompanyExists(companyId,trackChanges);
 
-      var employeesFromDb = _repository.Employee.GetEmployeesAsync(companyId, trackChanges);
+      var employeesWithMetaData = await _repository.Employee.GetEmployeesAsync(companyId, employeeParameters ,trackChanges);
 
-      return _mapper.Map<IEnumerable<EmployeeDto>>(employeesFromDb);
+      var employees = _mapper.Map<IEnumerable<EmployeeDto>>(employeesWithMetaData);
+
+      return (employees, employeesWithMetaData.MetaData);
     }
 
-    public async Task<EmployeeDto> GetEmployee(Guid companyId, Guid id, bool trackChanges)
+    public async Task<EmployeeDto> GetEmployeeAsync(Guid companyId, Guid id, bool trackChanges)
     {
       await CheckIfCompanyExists(companyId,trackChanges);
       var employeeDb = await GetEmployeeForCompanyAndCheckIfItExists(companyId, id, trackChanges);
@@ -54,7 +61,7 @@ namespace Service
       return employee;
     }
 
-    public async Task<EmployeeDto> CreateEmployeeForCompany(Guid companyId, EmployeeForCreationDto employeeForCreation, bool trackChanges)
+    public async Task<EmployeeDto> CreateEmployeeForCompanyAsync(Guid companyId, EmployeeForCreationDto employeeForCreation, bool trackChanges)
     {
       await CheckIfCompanyExists(companyId,trackChanges);
 
@@ -68,7 +75,7 @@ namespace Service
       return employeeToReturn;
     }
 
-    public async Task DeleteEmployeeForCompany(Guid companyId, Guid id, bool trackChanges)
+    public async Task DeleteEmployeeForCompanyAsync(Guid companyId, Guid id, bool trackChanges)
     {
       await CheckIfCompanyExists(companyId,trackChanges);
 
@@ -78,7 +85,7 @@ namespace Service
       await _repository.SaveAsync();
     }
 
-    public async Task<EmployeeDto> UpdateEmployeeForCompany(Guid companyId, Guid id, EmployeeForUpdateDto employeeForUpdate, bool compTrackChanges, bool empTrackChanges)
+    public async Task<EmployeeDto> UpdateEmployeeForCompanyAsync(Guid companyId, Guid id, EmployeeForUpdateDto employeeForUpdate, bool compTrackChanges, bool empTrackChanges)
     {
       await CheckIfCompanyExists(companyId, compTrackChanges);
 
@@ -91,7 +98,7 @@ namespace Service
       return employee;
     }
 
-    public async Task<(EmployeeForUpdateDto employeeToPatch, Employee employeeEntity)> GetEmployeeForPatch(Guid companyId, Guid id, bool compTrackChanges, bool empTrackChanges)
+    public async Task<(EmployeeForUpdateDto employeeToPatch, Employee employeeEntity)> GetEmployeeForPatchAsync(Guid companyId, Guid id, bool compTrackChanges, bool empTrackChanges)
     {
       await CheckIfCompanyExists(companyId,compTrackChanges);
 
@@ -102,7 +109,7 @@ namespace Service
       return (employeeToPatch, employeeEntity);
     }
 
-    public async Task SaveChangesForPatch(EmployeeForUpdateDto employeeToPatch, Employee employeeEntity)
+    public async Task SaveChangesForPatchAsync(EmployeeForUpdateDto employeeToPatch, Employee employeeEntity)
     {
       _mapper.Map(employeeToPatch, employeeEntity);
       await _repository.SaveAsync();
