@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Marvin.Cache.Headers;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Presentation.ActionFilters;
 using Presentation.ModelBinders;
 using Service.Contracts;
@@ -8,13 +10,16 @@ namespace Presentation.Controllers;
 
 [Route("api/companies")]
 [ApiController]
+//[ResponseCache(CacheProfileName = "120SecondsDuration")] 
 public class CompaniesController : ControllerBase
 {
   private readonly IServiceManager _service;
 
   public CompaniesController(IServiceManager service) => _service = service;
 
-  [HttpGet]
+  //[ApiVersion("1.0")]
+  [HttpGet(Name = nameof(GetCompanies))]
+  [Authorize]
   public async Task<IActionResult>  GetCompanies()
   {
     var companies = await _service.CompanyService.GetAllCompaniesAsync(trackChanges: false);
@@ -30,14 +35,17 @@ public class CompaniesController : ControllerBase
     return Ok(companies);
   }
 
-  [HttpGet("{id:guid}", Name = "CompanyById")] 
+  [HttpGet("{id:guid}", Name = "CompanyById")]
+  [HttpCacheExpiration(CacheLocation = CacheLocation.Public, MaxAge = 60)]
+  [HttpCacheValidation(MustRevalidate = false)]
+  //[ResponseCache(Duration = 60)]
   public async Task<IActionResult> GetCompany(Guid id)
   {
     var company = await _service.CompanyService.GetCompanyAsync(id, trackChanges: false);
     return Ok(company);
   }
 
-  [HttpPost]
+  [HttpPost(Name = nameof(CreateCompany))]
   [ServiceFilter(typeof(ValidationFilterAttribute))] 
   public async Task<IActionResult> CreateCompany([FromBody] CompanyForCreationDto company)
   {
@@ -80,5 +88,13 @@ public class CompaniesController : ControllerBase
     await _service.CompanyService.UpdateCompanyAsync(id, company, trackChanges: true);
 
     return NoContent();
+  }
+
+  [HttpOptions]
+  public IActionResult GetCompaniesOptions()
+  {
+    Response.Headers.Add("Allow", "GET, OPTIONS, POST");
+
+    return Ok();
   }
 }
