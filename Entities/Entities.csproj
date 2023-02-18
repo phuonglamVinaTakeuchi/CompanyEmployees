@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Folder Include="LinkModels\" />
+    <Folder Include="ConfigurationModels\" />
   </ItemGroup>
 
   <ItemGroup>
